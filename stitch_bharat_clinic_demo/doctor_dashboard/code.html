@@ -1,0 +1,245 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Doctor Dashboard - Mehta Family Clinic</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#dae2ff",
+                        "on-background": "#091c35",
+                        "primary-fixed-dim": "#b2c5ff",
+                        "primary-container": "#0052cc",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#b2c5ff",
+                        "inverse-surface": "#20314b",
+                        "tertiary-fixed-dim": "#65dca4",
+                        "on-primary-fixed-variant": "#0040a2",
+                        "secondary-container": "#dde0e2",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#f9f9ff",
+                        "tertiary-fixed": "#82f9be",
+                        "surface-dim": "#cadbfc",
+                        "inverse-on-surface": "#ecf0ff",
+                        "outline": "#737685",
+                        "on-secondary-fixed": "#181c1e",
+                        "on-primary-fixed": "#001848",
+                        "on-tertiary-container": "#72e9af",
+                        "on-tertiary": "#ffffff",
+                        "surface-container": "#e7eeff",
+                        "secondary-fixed": "#e0e3e5",
+                        "on-secondary-container": "#5f6365",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#0c56d0",
+                        "primary": "#003d9b",
+                        "secondary": "#5b5f61",
+                        "on-tertiary-fixed": "#002113",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f0f3ff",
+                        "tertiary-container": "#006844",
+                        "on-surface": "#091c35",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#434749",
+                        "on-tertiary-fixed-variant": "#005235",
+                        "on-primary-container": "#c4d2ff",
+                        "outline-variant": "#c3c6d6",
+                        "surface-variant": "#d6e3ff",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "tertiary": "#004e32",
+                        "surface-container-highest": "#d6e3ff",
+                        "background": "#f9f9ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#dfe8ff",
+                        "surface-bright": "#f9f9ff",
+                        "on-surface-variant": "#434654"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "touch-target": "48px",
+                        "base": "4px",
+                        "xl": "32px",
+                        "sm": "12px",
+                        "xs": "8px",
+                        "lg": "24px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col antialiased">
+<!-- TopAppBar -->
+<header class="bg-surface text-primary border-b border-outline-variant flex justify-between items-center w-full px-md py-xs h-touch-target sticky top-0 z-40">
+<!-- Brand/Headline -->
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-2xl">local_hospital</span>
+<h1 class="font-headline-md text-headline-md text-primary font-bold">Bharat Clinic</h1>
+</div>
+<!-- Desktop Navigation (Hidden on Mobile) -->
+<nav class="hidden md:flex items-center gap-lg">
+<a class="flex items-center gap-base text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 px-sm py-xs rounded-md" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex items-center gap-base text-primary font-bold hover:bg-surface-container-low transition-colors duration-200 px-sm py-xs rounded-md" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">reorder</span>
+<span class="font-label-md text-label-md">Queue</span>
+</a>
+<a class="flex items-center gap-base text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 px-sm py-xs rounded-md" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md">Patients</span>
+</a>
+<a class="flex items-center gap-base text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 px-sm py-xs rounded-md" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="font-label-md text-label-md">Search</span>
+</a>
+</nav>
+<!-- Trailing Action / Avatar -->
+<div class="flex items-center gap-sm">
+<div class="hidden sm:flex flex-col items-end mr-sm">
+<span class="font-label-md text-label-md text-on-background">Dr. Aniket Mehta</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Doctor</span>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-primary font-bold text-sm">
+                AM
+            </div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-3xl mx-auto p-md pb-[80px] md:pb-lg flex flex-col gap-lg">
+<!-- Header / Date Context -->
+<div class="flex justify-between items-end border-b border-outline-variant pb-sm">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-background">Current Queue</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">29 Aug 2026</p>
+</div>
+<div class="bg-surface-container-low border border-outline-variant rounded-lg px-sm py-xs flex items-center gap-xs">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">visibility</span>
+<span class="font-label-md text-label-md text-on-background">Total Seen: <strong class="text-primary">18</strong></span>
+</div>
+</div>
+<!-- Next Patient Card (Bento Focus) -->
+<section class="flex flex-col gap-sm">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Up Next</h3>
+<div class="bg-surface-container-lowest border border-outline-variant border-l-4 border-l-primary rounded-lg p-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
+<div class="flex items-start gap-md w-full">
+<!-- Token / Identifier -->
+<div class="bg-primary-container text-on-primary-container font-headline-md text-headline-md rounded-lg w-12 h-12 flex items-center justify-center shrink-0">
+                        #04
+                    </div>
+<!-- Patient Details -->
+<div class="flex flex-col flex-1">
+<div class="flex items-center justify-between w-full">
+<h4 class="font-headline-md text-headline-md text-on-background">Rajesh Patil</h4>
+<span class="bg-error-container text-on-error-container font-label-sm text-label-sm px-2 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                                8 min wait
+                            </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">42 yrs • Male</p>
+<div class="flex items-center gap-xs mt-sm bg-surface-container py-1 px-2 rounded w-fit">
+<span class="material-symbols-outlined text-on-secondary-container text-[16px]">sick</span>
+<span class="font-label-md text-label-md text-on-secondary-container">Fever + body ache</span>
+</div>
+</div>
+</div>
+<!-- Action -->
+<button class="bg-primary hover:bg-on-primary-fixed-variant text-on-primary font-label-md text-label-md px-lg h-touch-target rounded-full flex items-center justify-center gap-sm transition-colors w-full sm:w-auto shrink-0 shadow-sm">
+                    Open Patient
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- Upcoming List -->
+<section class="flex flex-col gap-sm mt-md">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Waiting Room</h3>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg divide-y divide-outline-variant">
+<!-- List Item 1 -->
+<div class="p-md flex items-center justify-between hover:bg-surface-container-low transition-colors cursor-pointer min-h-[48px]">
+<div class="flex items-center gap-md">
+<span class="font-label-md text-label-md text-on-surface-variant w-6">#05</span>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-background font-medium">Sneha Joshi</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Headache</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+</div>
+<!-- List Item 2 -->
+<div class="p-md flex items-center justify-between hover:bg-surface-container-low transition-colors cursor-pointer min-h-[48px]">
+<div class="flex items-center gap-md">
+<span class="font-label-md text-label-md text-on-surface-variant w-6">#06</span>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-background font-medium">Amit Shah</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Cough</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center px-md pb-xs pt-xs bg-surface border-t border-outline-variant">
+<!-- Home (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-md py-1 scale-95 active:scale-90 transition-transform hover:text-primary" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</a>
+<!-- Queue (Active based on Dashboard context) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-md py-1 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">reorder</span>
+<span class="font-label-sm text-label-sm mt-1 font-bold">Queue</span>
+</a>
+<!-- Patients (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-md py-1 scale-95 active:scale-90 transition-transform hover:text-primary" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-sm text-label-sm mt-1">Patients</span>
+</a>
+<!-- Search (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-md py-1 scale-95 active:scale-90 transition-transform hover:text-primary" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="font-label-sm text-label-sm mt-1">Search</span>
+</a>
+</nav>
+
+
+</body></html>
