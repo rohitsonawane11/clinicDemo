@@ -10,7 +10,82 @@
   --color-cardbg: #ffffff;
   --color-softblue: #f0f3ff;
   --color-bordercol: #e2e8f0;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+
+  --color-primary: #0052cc;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #e0edff;
+  --color-on-primary-container: #003b94;
+  --color-primary-fixed: #dae2ff;
+  --color-on-primary-fixed: #001848;
+  --color-primary-fixed-dim: #b2c5ff;
+  --color-on-primary-fixed-variant: #0040a2;
+  --color-inverse-primary: #b2c5ff;
+
+  --color-secondary: #5b5f61;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #f1f5f9;
+  --color-on-secondary-container: #334155;
+  --color-secondary-fixed: #e0e3e5;
+  --color-on-secondary-fixed: #181c1e;
+
+  --color-tertiary: #059669;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #ecfdf5;
+  --color-on-tertiary-container: #065f46;
+  --color-tertiary-fixed: #82f9be;
+  --color-on-tertiary-fixed: #002113;
+
+  --color-background: #f9f9ff;
+  --color-on-background: #0f172a;
+  --color-surface-dim: #f1f5f9;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f8fafc;
+  --color-surface-container: #f1f5f9;
+  --color-surface-container-high: #e2e8f0;
+  --color-surface-container-highest: #cbd5e1;
+  --color-on-surface: #0f172a;
+  --color-on-surface-variant: #64748b;
+  --color-outline: #94a3b8;
+  --color-outline-variant: #e2e8f0;
+
+  --color-error: #ef4444;
+  --color-on-error: #ffffff;
+  --color-error-container: #fee2e2;
+  --color-on-error-container: #991b1b;
+
+  --spacing-touch-target: 48px;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Material Symbols Font Setup */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'liga';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.icon-fill {
+  font-variation-settings: 'FILL' 1;
 }
 
 .glow-brand {
@@ -38,4 +113,15 @@
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 9999px;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
