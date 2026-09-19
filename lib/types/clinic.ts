@@ -129,6 +129,16 @@ export interface Doctor {
   createdAt: string;
 }
 
+export interface Receptionist {
+  id: string;
+  clinicId: string;
+  name: string;
+  email: string;
+  phone: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface PrescriptionPresetMedicine {
   name: string;
   type: string;
@@ -156,6 +166,9 @@ export interface ClinicMedicine {
   name: string;
   type: string;
   category?: string;
+  genericName?: string;
+  brandName?: string;
+  strength?: string;
 }
 
 export interface CreateClinicPayload {
@@ -168,4 +181,55 @@ export interface CreateClinicPayload {
   logoUrl?: string;
   address: ClinicAddress;
   ownerProfile: UserProfile;
+}
+
+export type Gender = 'Male' | 'Female' | 'Other';
+export type QueueStatus = 'WAITING' | 'IN_CONSULTATION' | 'COMPLETED';
+
+export interface Patient {
+  id: string;
+  clinicId: string;
+  name: string;
+  age: number;
+  gender: Gender;
+  mobile: string;
+  allergies: string[];
+  createdAt: string;
+}
+
+export interface QueueEntry {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  token: number;
+  date: string;
+  arrivedAt: string;
+  status: QueueStatus;
+  complaint: string;
+}
+
+export interface ConsultationMedicine {
+  name: string;
+  type: string;
+  dose: string;
+  timing: string;
+  duration: number;
+}
+
+export interface Consultation {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  queueEntryId?: string;
+  createdAt: string;
+  vitals: { temp: string; bp: string; pulse: string; spo2: string; weight: string };
+  symptoms: string[];
+  diagnosis: string;
+  investigations?: string;
+  recommendedTests?: string[];
+  medicines: ConsultationMedicine[];
+  advice: string;
+  prescriptionLanguage?: string;
+  notes: string;
+  followUpDate?: string;
 }

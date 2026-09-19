@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bharat Clinic Demo
 
-## Getting Started
+A desktop-first, browser-persisted clinic workflow demonstration. All people, clinical records, and prescriptions are fictional demo data. No backend or real authentication is used.
 
-First, run the development server:
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`. For the main workflow, go directly to `http://localhost:3000/receptionist`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 2–3 minute demo script
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. On Reception, point out the live waiting, consultation, and completed totals.
+2. Select **Start demo: find a patient**.
+3. Enter `9876543210` to find Rajesh, or enter a new number and register a patient.
+4. Add the patient to today’s queue and note the assigned token. A duplicate active token is prevented.
+5. Open **Doctor Queue**, call the patient, and open their profile.
+6. Start the consultation, apply a template or enter a diagnosis, and add at least one medicine.
+7. Save the visit. The token becomes completed and the new consultation appears in patient history.
+8. Use **Print preview** to show the browser-printable consultation, then use **Reset demo data** before another presentation.
 
-## Learn More
+Demo state is stored in localStorage under `bharat_clinic_demo_state_v1` and survives refreshes.
 
-To learn more about Next.js, take a look at the following resources:
+## Verification
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm lint
+pnpm build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Primary presentation sizes: 1366×768 and 1920×1080.

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ClinicType,
   PrimarySpecialty,
@@ -10,8 +9,10 @@ import {
   UserProfile,
   Clinic,
   PrescriptionPreset,
+  PrescriptionPresetMedicine,
   Doctor,
   ClinicMedicine,
+  Receptionist,
 } from "../../lib/types/clinic";
 import {
   getCurrentUser,
@@ -22,6 +23,17 @@ import {
   getClinicMedicines,
   addDoctorToClinic,
   addMedicineToClinic,
+  getClinicReceptionists,
+  addReceptionistToClinic,
+  updateDoctorInClinic,
+  deleteDoctorFromClinic,
+  updateReceptionistInClinic,
+  deleteReceptionistFromClinic,
+  addPresetToClinic,
+  updatePresetInClinic,
+  deletePresetFromClinic,
+  updateMedicineInClinic,
+  deleteMedicineFromClinic,
 } from "../../lib/store/clinicStore";
 
 const CLINIC_TYPES: ClinicType[] = [
@@ -45,10 +57,8 @@ const PRIMARY_SPECIALTIES: PrimarySpecialty[] = [
 ];
 
 export default function ClinicOnboardingPage() {
-  const router = useRouter();
-
-  // Step state: 1 = Basic Info, 2 = Location, 3 = Created / Optional Setup
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  // 1 = Owner, 2 = Clinic, 3 = Location, 4 = Created
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Authenticated Owner Context
@@ -59,9 +69,7 @@ export default function ClinicOnboardingPage() {
     phone: "9876543210",
     role: "CLINIC_OWNER",
   });
-  const [isEditingOwner, setIsEditingOwner] = useState(false);
-
-  // Step 1 Form State
+  // Clinic Form State
   const [clinicName, setClinicName] = useState("");
   const [clinicType, setClinicType] = useState<ClinicType>("Clinic");
   const [primarySpecialty, setPrimarySpecialty] = useState<PrimarySpecialty>("General Medicine");
@@ -70,13 +78,12 @@ export default function ClinicOnboardingPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Step 2 Form State
+  // Location Form State
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState<string>("Maharashtra");
   const [pincode, setPincode] = useState("");
-  const country = "India";
 
   // Validation Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -86,6 +93,7 @@ export default function ClinicOnboardingPage() {
   const [clinicDoctors, setClinicDoctors] = useState<Doctor[]>([]);
   const [clinicPresets, setClinicPresets] = useState<PrescriptionPreset[]>([]);
   const [clinicMedicines, setClinicMedicines] = useState<ClinicMedicine[]>([]);
+  const [clinicReceptionists, setClinicReceptionists] = useState<Receptionist[]>([]);
 
   // Optional Setup Modals
   const [showAddDoctorModal, setShowAddDoctorModal] = useState(false);
@@ -93,27 +101,49 @@ export default function ClinicOnboardingPage() {
   const [newDoctorQualification, setNewDoctorQualification] = useState("MBBS");
   const [newDoctorRegNo, setNewDoctorRegNo] = useState("");
   const [newDoctorSpecialty, setNewDoctorSpecialty] = useState("General Medicine");
+  const [teamRole, setTeamRole] = useState<'DOCTOR' | 'RECEPTIONIST'>('DOCTOR');
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [staffEmail, setStaffEmail] = useState("");
+  const [staffPhone, setStaffPhone] = useState("");
 
   const [showPresetsModal, setShowPresetsModal] = useState(false);
   const [showMedicinesModal, setShowMedicinesModal] = useState(false);
   const [newMedName, setNewMedName] = useState("");
   const [newMedType, setNewMedType] = useState("Tablet");
+  const [editingMedicineId, setEditingMedicineId] = useState<string | null>(null);
+  const [presetName, setPresetName] = useState("");
+  const [presetDiagnosis, setPresetDiagnosis] = useState("");
+  const [presetSymptoms, setPresetSymptoms] = useState("");
+  const [presetMedicine, setPresetMedicine] = useState("");
+  const [presetMedicineType, setPresetMedicineType] = useState("Tablet");
+  const [presetDose, setPresetDose] = useState("1-0-1");
+  const [presetTiming, setPresetTiming] = useState("After Food");
+  const [presetDuration, setPresetDuration] = useState(3);
+  const [presetMedicines, setPresetMedicines] = useState<PrescriptionPresetMedicine[]>([]);
+  const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
+  const [showMedicineSuggestions, setShowMedicineSuggestions] = useState(false);
+  const [presetSaveMessage, setPresetSaveMessage] = useState("");
 
   // Load current user from store on mount
+  // Hydrate the simulated authenticated user after localStorage is available.
   useEffect(() => {
     const u = getCurrentUser();
     // Strip +91 for clean 10-digit input
     const cleanPhone = u.phone.replace("+91", "").replace(/\s+/g, "").trim();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOwner({ ...u, phone: cleanPhone });
     setPhone(cleanPhone);
   }, []);
 
   // Sync doctors & presets when clinic is created
+  // Refresh optional tenant resources when the created tenant changes.
   useEffect(() => {
     if (createdClinic) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClinicDoctors(getClinicDoctors(createdClinic.id));
       setClinicPresets(getClinicPresets(createdClinic.id));
       setClinicMedicines(getClinicMedicines(createdClinic.id));
+      setClinicReceptionists(getClinicReceptionists(createdClinic.id));
     }
   }, [createdClinic]);
 
@@ -145,8 +175,28 @@ export default function ClinicOnboardingPage() {
     }
   };
 
-  // Step 1 Validation
-  const validateStep1 = (): boolean => {
+  const validateOwner = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    const cleanPhone = owner.phone.replace(/[\s\-\+]/g, "");
+    if (owner.name.trim().length < 2) newErrors.ownerName = "Enter the owner’s full name";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(owner.email.trim())) newErrors.ownerEmail = "Enter a valid email address";
+    if (!/^(91)?[6789]\d{9}$/.test(cleanPhone)) newErrors.ownerPhone = "Enter a valid 10-digit Indian mobile number";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleOwnerContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateOwner()) return;
+    const cleanPhone = owner.phone.replace(/[\s\-\+]/g, "").replace(/^91/, "");
+    const nextOwner = { ...owner, name: owner.name.trim(), email: owner.email.trim(), phone: cleanPhone };
+    setOwner(nextOwner);
+    updateCurrentUser({ ...nextOwner, phone: `+91 ${cleanPhone}` });
+    setCurrentStep(2);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const validateClinic = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!clinicName.trim()) {
@@ -168,16 +218,11 @@ export default function ClinicOnboardingPage() {
       newErrors.email = "Please enter a valid email address";
     }
 
-    if (!owner.name.trim()) {
-      newErrors.ownerName = "Owner name is required";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Step 2 Validation
-  const validateStep2 = (): boolean => {
+  const validateLocation = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!addressLine1.trim()) {
@@ -205,21 +250,15 @@ export default function ClinicOnboardingPage() {
 
   const handleNextToLocation = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateStep1()) {
-      // Save owner profile changes if edited
-      updateCurrentUser({
-        name: owner.name,
-        email: owner.email,
-        phone: `+91 ${owner.phone.replace(/[\s\-\+]/g, "")}`,
-      });
-      setCurrentStep(2);
+    if (validateClinic()) {
+      setCurrentStep(3);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleCreateClinic = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateStep2()) return;
+    if (!validateLocation()) return;
 
     setIsSubmitting(true);
     // Simulate realistic tenant creation latency
@@ -253,7 +292,7 @@ export default function ClinicOnboardingPage() {
     setClinicDoctors(doctors);
     setClinicPresets(presets);
     setIsSubmitting(false);
-    setCurrentStep(3);
+    setCurrentStep(4);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -261,13 +300,33 @@ export default function ClinicOnboardingPage() {
     e.preventDefault();
     if (!createdClinic || !newDoctorName.trim()) return;
 
+    if (teamRole === 'RECEPTIONIST') {
+      if (editingTeamId) {
+        updateReceptionistInClinic(editingTeamId, { name: newDoctorName.trim(), email: staffEmail.trim(), phone: staffPhone.trim() });
+      } else {
+        addReceptionistToClinic(createdClinic.id, { name: newDoctorName.trim(), email: staffEmail.trim(), phone: staffPhone.trim() });
+      }
+      setClinicReceptionists(getClinicReceptionists(createdClinic.id));
+      setEditingTeamId(null);
+      setNewDoctorName(""); setStaffEmail(""); setStaffPhone("");
+      return;
+    }
+
+    if (editingTeamId) {
+      updateDoctorInClinic(editingTeamId, { name: newDoctorName.startsWith("Dr.") ? newDoctorName : `Dr. ${newDoctorName}`, qualification: newDoctorQualification, registrationNumber: newDoctorRegNo, specialty: newDoctorSpecialty, email: staffEmail, phone: staffPhone });
+      setClinicDoctors(getClinicDoctors(createdClinic.id));
+      setEditingTeamId(null);
+      setNewDoctorName(""); setStaffEmail(""); setStaffPhone("");
+      return;
+    }
+
     const doc = addDoctorToClinic(createdClinic.id, {
       name: newDoctorName.startsWith("Dr.") ? newDoctorName : `Dr. ${newDoctorName}`,
       qualification: newDoctorQualification.trim() || "MBBS",
       registrationNumber: newDoctorRegNo.trim() || "REG-" + Math.floor(100000 + Math.random() * 900000),
       specialty: newDoctorSpecialty,
-      email: `${newDoctorName.toLowerCase().replace(/[^a-z0-9]/g, "")}@${createdClinic.name.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
-      phone: "+91 9" + Math.floor(100000000 + Math.random() * 900000000),
+      email: staffEmail.trim() || `${newDoctorName.toLowerCase().replace(/[^a-z0-9]/g, "")}@clinic.demo`,
+      phone: staffPhone.trim() || "+91 90000 00000",
     });
 
     setClinicDoctors((prev) => [doc, ...prev]);
@@ -280,11 +339,31 @@ export default function ClinicOnboardingPage() {
     e.preventDefault();
     if (!createdClinic || !newMedName.trim()) return;
 
-    const med = addMedicineToClinic(createdClinic.id, newMedName, newMedType);
-    setClinicMedicines((prev) => [med, ...prev]);
+    if (editingMedicineId) updateMedicineInClinic(editingMedicineId, { name: newMedName.trim(), type: newMedType });
+    else addMedicineToClinic(createdClinic.id, newMedName, newMedType);
+    setClinicMedicines(getClinicMedicines(createdClinic.id));
     setNewMedName("");
-    setShowMedicinesModal(false);
+    setEditingMedicineId(null);
   };
+
+  const handlePresetSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createdClinic || !presetName.trim() || presetMedicines.length === 0) return;
+    const data = { label: presetName.trim(), diagnosis: presetDiagnosis.trim() || presetName.trim(), icon: 'prescriptions', color: '#0B57D0', symptoms: presetSymptoms.split(',').map((item) => item.trim()).filter(Boolean), advice: '', medicines: presetMedicines };
+    if (editingPresetId) updatePresetInClinic(editingPresetId, data);
+    else addPresetToClinic(createdClinic.id, data);
+    setClinicPresets(getClinicPresets(createdClinic.id));
+    setPresetSaveMessage(editingPresetId ? "Preset updated and available in Quick Templates." : "Preset saved and available in Quick Templates.");
+    setPresetName(""); setPresetDiagnosis(""); setPresetSymptoms(""); setPresetMedicine(""); setPresetMedicines([]); setEditingPresetId(null); setShowMedicineSuggestions(false);
+  };
+
+  const addMedicineToPreset = () => {
+    if (!presetMedicine.trim()) return;
+    setPresetMedicines((items) => [...items, { name: presetMedicine.trim(), type: presetMedicineType, dose: presetDose, timing: presetTiming, duration: presetDuration }]);
+    setPresetMedicine(""); setPresetMedicineType("Tablet"); setPresetDose("1-0-1"); setPresetTiming("After Food"); setPresetDuration(3); setShowMedicineSuggestions(false);
+  };
+
+  const medicineSuggestions = !showMedicineSuggestions || presetMedicine.trim().length < 2 ? [] : clinicMedicines.filter((item) => item.name.toLowerCase().includes(presetMedicine.toLowerCase())).slice(0, 6);
 
   return (
     <div className="bg-background text-on-background min-h-screen flex flex-col antialiased font-sans">
@@ -300,10 +379,7 @@ export default function ClinicOnboardingPage() {
               <span className="hidden sm:inline-block ml-2 text-xs bg-primary-fixed text-on-primary-fixed-variant px-2 py-0.5 rounded-full font-semibold">SaaS Tenant Onboarding</span>
             </div>
           </Link>
-          <div className="flex items-center gap-xs text-xs font-semibold text-on-surface-variant bg-surface-container-low px-sm py-1.5 rounded-full border border-outline-variant">
-            <span className="material-symbols-outlined text-[16px] text-primary">verified_user</span>
-            <span>Owner: <strong className="text-on-background">{owner.name}</strong></span>
-          </div>
+          <span className="text-xs font-semibold text-on-surface-variant bg-surface-container-low px-sm py-1.5 rounded-full border border-outline-variant">Workspace setup</span>
         </div>
       </header>
 
@@ -312,70 +388,46 @@ export default function ClinicOnboardingPage() {
         
         {/* Multi-step Progress Bar */}
         <div className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-xs">
-          <div className="flex items-center justify-between">
-            {/* Step 1 Indicator */}
-            <div className="flex items-center gap-sm">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
-                currentStep >= 1 ? "bg-primary text-white shadow-xs" : "bg-surface-container text-on-surface-variant"
-              }`}>
-                {currentStep > 1 ? (
-                  <span className="material-symbols-outlined text-[18px]">check</span>
-                ) : (
-                  "1"
-                )}
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-xs font-bold text-on-surface">Clinic Details</p>
-                <p className="text-[11px] text-on-surface-variant">Name & Specialty</p>
-              </div>
-            </div>
-
-            {/* Step Divider */}
-            <div className={`flex-1 h-[2px] mx-sm transition-all ${
-              currentStep >= 2 ? "bg-primary" : "bg-outline-variant"
-            }`} />
-
-            {/* Step 2 Indicator */}
-            <div className="flex items-center gap-sm">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
-                currentStep >= 2 ? "bg-primary text-white shadow-xs" : "bg-surface-container text-on-surface-variant"
-              }`}>
-                {currentStep > 2 ? (
-                  <span className="material-symbols-outlined text-[18px]">check</span>
-                ) : (
-                  "2"
-                )}
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-xs font-bold text-on-surface">Location</p>
-                <p className="text-[11px] text-on-surface-variant">Address & Pincode</p>
-              </div>
-            </div>
-
-            {/* Step Divider */}
-            <div className={`flex-1 h-[2px] mx-sm transition-all ${
-              currentStep === 3 ? "bg-primary" : "bg-outline-variant"
-            }`} />
-
-            {/* Step 3 Indicator */}
-            <div className="flex items-center gap-sm">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
-                currentStep === 3 ? "bg-tertiary-container text-on-tertiary-container shadow-xs" : "bg-surface-container text-on-surface-variant"
-              }`}>
-                <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-xs font-bold text-on-surface">Setup & Launch</p>
-                <p className="text-[11px] text-on-surface-variant">Ready to use</p>
-              </div>
-            </div>
+          <div className="grid grid-cols-4 gap-sm">
+            {[
+              ["Your Details", "Account contact"],
+              ["Clinic Details", "Name & specialty"],
+              ["Location", "Address & pincode"],
+              ["Launch", "Ready to use"],
+            ].map(([label, caption], index) => {
+              const step = index + 1;
+              const complete = currentStep > step;
+              const active = currentStep === step;
+              return <div key={label} className={`rounded-lg px-sm py-2 flex items-center gap-sm ${active ? "bg-primary-container" : ""}`}>
+                <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center font-bold text-sm ${complete || active ? "bg-primary text-white" : "bg-surface-container text-on-surface-variant"}`}>
+                  {complete ? <span className="material-symbols-outlined text-[18px]">check</span> : step}
+                </div>
+                <div><p className="text-xs font-bold text-on-surface">{label}</p><p className="text-[10px] text-on-surface-variant">{caption}</p></div>
+              </div>;
+            })}
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* STEP 1: BASIC CLINIC INFORMATION                                          */}
-        {/* ========================================================================= */}
         {currentStep === 1 && (
+          <form onSubmit={handleOwnerContinue} className="space-y-lg animate-[slideUp_0.25s_ease-out]">
+            <div className="space-y-xs">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-on-background tracking-tight">Tell us about you</h2>
+              <p className="text-sm md:text-base text-on-surface-variant">We’ll use these details for your account and important workspace communication.</p>
+            </div>
+            <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md md:p-lg space-y-md shadow-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
+                <div className="sm:col-span-2 space-y-xs"><label className="block text-sm font-bold" htmlFor="ownerName">Full Name <span className="text-error">*</span></label><input id="ownerName" autoFocus value={owner.name} onChange={(e) => setOwner({ ...owner, name: e.target.value })} className={`w-full h-touch-target bg-transparent border rounded-lg px-md text-sm focus:ring-1 focus:ring-primary focus:outline-none ${errors.ownerName ? "border-error" : "border-outline-variant"}`} placeholder="e.g. Dr. Aniket Mehta" />{errors.ownerName && <p className="text-xs text-error">{errors.ownerName}</p>}</div>
+                <div className="space-y-xs"><label className="block text-sm font-bold" htmlFor="ownerEmail">Email Address <span className="text-error">*</span></label><input id="ownerEmail" type="email" value={owner.email} onChange={(e) => setOwner({ ...owner, email: e.target.value })} className={`w-full h-touch-target bg-transparent border rounded-lg px-md text-sm focus:ring-1 focus:ring-primary focus:outline-none ${errors.ownerEmail ? "border-error" : "border-outline-variant"}`} placeholder="name@example.com" />{errors.ownerEmail && <p className="text-xs text-error">{errors.ownerEmail}</p>}</div>
+                <div className="space-y-xs"><label className="block text-sm font-bold" htmlFor="ownerPhone">Mobile Number <span className="text-error">*</span></label><div className="flex"><span className="h-touch-target px-3 bg-surface-container border border-r-0 border-outline-variant rounded-l-lg flex items-center text-sm">+91</span><input id="ownerPhone" type="tel" inputMode="numeric" maxLength={10} value={owner.phone} onChange={(e) => setOwner({ ...owner, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })} className={`w-full h-touch-target bg-transparent border rounded-r-lg px-md text-sm focus:ring-1 focus:ring-primary focus:outline-none ${errors.ownerPhone ? "border-error" : "border-outline-variant"}`} placeholder="9876543210" /></div>{errors.ownerPhone && <p className="text-xs text-error">{errors.ownerPhone}</p>}</div>
+              </div>
+              <p className="text-xs text-on-surface-variant border-t border-outline-variant pt-sm">Your access permissions are configured automatically and are not shown in the customer-facing workspace.</p>
+            </section>
+            <div className="flex justify-end"><button type="submit" className="px-xl h-touch-target bg-primary text-white font-bold text-sm rounded-xl flex items-center gap-sm shadow-md">Continue to Clinic Details <span className="material-symbols-outlined text-[18px]">arrow_forward</span></button></div>
+          </form>
+        )}
+
+        {/* STEP 2: BASIC CLINIC INFORMATION */}
+        {currentStep === 2 && (
           <form onSubmit={handleNextToLocation} className="space-y-lg animate-[slideUp_0.25s_ease-out]">
             {/* Header Titles */}
             <div className="space-y-xs">
@@ -386,68 +438,6 @@ export default function ClinicOnboardingPage() {
                 Create your clinic workspace to manage patients, doctors, appointments and consultations.
               </p>
             </div>
-
-            {/* Owner Context Card */}
-            <section className="bg-primary-container/10 border border-primary/20 rounded-xl p-md space-y-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-sm">
-                  <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-sm">
-                    <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-on-surface">You&apos;re setting up this clinic as the owner.</h3>
-                    <p className="text-xs text-on-surface-variant">Your user account will be assigned the <span className="font-semibold text-primary">CLINIC_OWNER</span> role.</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsEditingOwner(!isEditingOwner)}
-                  className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-[14px]">{isEditingOwner ? "check" : "edit"}</span>
-                  {isEditingOwner ? "Done" : "Edit Profile"}
-                </button>
-              </div>
-
-              {isEditingOwner ? (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-sm pt-sm border-t border-primary/10">
-                  <div>
-                    <label className="text-[11px] font-semibold text-on-surface-variant block mb-1">Owner Name *</label>
-                    <input
-                      type="text"
-                      value={owner.name}
-                      onChange={(e) => setOwner({ ...owner, name: e.target.value })}
-                      className="w-full h-[38px] px-sm text-xs bg-surface border border-outline-variant rounded-lg focus:border-primary focus:outline-none"
-                    />
-                    {errors.ownerName && <p className="text-[10px] text-error mt-0.5">{errors.ownerName}</p>}
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-on-surface-variant block mb-1">Owner Email</label>
-                    <input
-                      type="email"
-                      value={owner.email}
-                      onChange={(e) => setOwner({ ...owner, email: e.target.value })}
-                      className="w-full h-[38px] px-sm text-xs bg-surface border border-outline-variant rounded-lg focus:border-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-on-surface-variant block mb-1">Owner Mobile *</label>
-                    <input
-                      type="tel"
-                      value={owner.phone}
-                      onChange={(e) => setOwner({ ...owner, phone: e.target.value })}
-                      className="w-full h-[38px] px-sm text-xs bg-surface border border-outline-variant rounded-lg focus:border-primary focus:outline-none"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-center gap-md pt-sm border-t border-primary/10 text-xs text-on-surface-variant">
-                  <span><strong>Name:</strong> {owner.name}</span>
-                  <span><strong>Email:</strong> {owner.email}</span>
-                  <span><strong>Mobile:</strong> +91 {owner.phone}</span>
-                </div>
-              )}
-            </section>
 
             {/* Clinic Details Form Card */}
             <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md md:p-lg space-y-md shadow-xs">
@@ -620,7 +610,8 @@ export default function ClinicOnboardingPage() {
             </section>
 
             {/* Action Bar */}
-            <div className="flex justify-end pt-sm">
+            <div className="flex justify-between pt-sm">
+              <button type="button" onClick={() => setCurrentStep(1)} className="px-lg h-touch-target border border-outline-variant text-on-surface font-semibold text-sm rounded-xl">Back</button>
               <button
                 type="submit"
                 className="w-full sm:w-auto px-xl h-touch-target bg-primary text-white font-bold text-sm rounded-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-sm shadow-md"
@@ -633,9 +624,9 @@ export default function ClinicOnboardingPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 2: CLINIC LOCATION                                                   */}
+        {/* STEP 3: CLINIC LOCATION                                                   */}
         {/* ========================================================================= */}
-        {currentStep === 2 && (
+        {currentStep === 3 && (
           <form onSubmit={handleCreateClinic} className="space-y-lg animate-[slideUp_0.25s_ease-out]">
             {/* Header Titles */}
             <div className="space-y-xs">
@@ -769,7 +760,7 @@ export default function ClinicOnboardingPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setCurrentStep(1);
+                  setCurrentStep(2);
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 className="px-lg h-touch-target bg-surface-container-low hover:bg-surface-container border border-outline-variant text-on-surface font-semibold text-sm rounded-xl transition-colors flex items-center gap-xs"
@@ -802,7 +793,7 @@ export default function ClinicOnboardingPage() {
         {/* ========================================================================= */}
         {/* STEP 3: CLINIC CREATED & OPTIONAL SETUP                                   */}
         {/* ========================================================================= */}
-        {currentStep === 3 && createdClinic && (
+        {currentStep === 4 && createdClinic && (
           <div className="space-y-lg animate-[slideUp_0.25s_ease-out]">
             
             {/* Success Hero Banner */}
@@ -810,14 +801,14 @@ export default function ClinicOnboardingPage() {
               <div className="w-16 h-16 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center mx-auto shadow-md">
                 <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
               </div>
-              <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-tertiary text-white uppercase tracking-wider">
-                Tenant Active & Ready
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-tertiary text-white tracking-wide">
+                Setup complete
               </span>
               <h2 className="text-2xl md:text-3xl font-extrabold text-on-background">
-                {createdClinic.name} is Live!
+                {createdClinic.name} is ready
               </h2>
-              <p className="text-sm text-on-surface-variant max-w-xl mx-auto">
-                Your clinic workspace has been established with ID <code className="bg-surface-container px-2 py-0.5 rounded font-mono text-primary font-bold">{createdClinic.id}</code>. You are registered as the <strong className="text-on-background">Clinic Owner</strong>.
+              <p className="text-sm text-on-surface-variant max-w-2xl mx-auto">
+                Start with the receptionist desk, open the doctor dashboard, or configure your clinic settings at any time.
               </p>
               
               {/* Primary Direct Dashboard CTA */}
@@ -837,6 +828,13 @@ export default function ClinicOnboardingPage() {
                 >
                   <span className="material-symbols-outlined text-[20px] text-primary">support_agent</span>
                   <span>Open Receptionist Desk</span>
+                </Link>
+                <Link
+                  href="/settings"
+                  className="px-lg h-touch-target bg-surface-container-lowest border border-outline-variant hover:bg-surface-container text-on-surface font-semibold text-sm rounded-xl transition-colors flex items-center gap-2 shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[20px] text-primary">settings</span>
+                  <span>Configure Clinic</span>
                 </Link>
               </div>
             </section>
@@ -867,33 +865,33 @@ export default function ClinicOnboardingPage() {
                   <p className="text-sm font-bold text-on-surface mt-0.5">{createdClinic.address.city}, {createdClinic.address.state}</p>
                 </div>
                 <div>
-                  <p className="text-on-surface-variant font-medium">Owner</p>
-                  <p className="text-sm font-bold text-on-surface mt-0.5">{createdClinic.ownerName}</p>
+                  <p className="text-on-surface-variant font-medium">Workspace Status</p>
+                  <p className="text-sm font-bold text-tertiary mt-0.5">Active</p>
                 </div>
               </div>
             </section>
 
             {/* Optional Setup Steps (Non-blocking) */}
-            <section className="space-y-md">
+            <section className="hidden" aria-hidden="true">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-on-surface">Optional Setup</h3>
-                  <p className="text-xs text-on-surface-variant">Customize doctors, presets, and medicines at your convenience.</p>
+                  <h3 className="text-lg font-bold text-on-surface">Finish your setup</h3>
+                  <p className="text-xs text-on-surface-variant">Add staff and create prescription shortcuts now, or return later.</p>
                 </div>
                 <span className="text-xs bg-surface-container text-on-surface-variant px-2 py-0.5 rounded font-medium">Non-blocking</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-md">
                 
-                {/* 1. Add Doctor Card */}
+                {/* 1. Team Card */}
                 <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col justify-between shadow-xs hover:border-primary/50 transition-all">
                   <div className="space-y-xs">
                     <div className="w-10 h-10 rounded-lg bg-primary-container/20 text-primary flex items-center justify-center font-bold">
                       <span className="material-symbols-outlined text-[22px]">person_add</span>
                     </div>
-                    <h4 className="text-sm font-bold text-on-surface">Add Doctor</h4>
+                    <h4 className="text-sm font-bold text-on-surface">Clinic Team</h4>
                     <p className="text-xs text-on-surface-variant leading-relaxed">
-                      {clinicDoctors.length} doctor{clinicDoctors.length > 1 ? "s" : ""} registered. Add associate consultants or specialists.
+                      {clinicDoctors.length} doctor{clinicDoctors.length !== 1 ? "s" : ""} and {clinicReceptionists.length} receptionist{clinicReceptionists.length !== 1 ? "s" : ""}.
                     </p>
                   </div>
                   <div className="pt-md">
@@ -903,7 +901,7 @@ export default function ClinicOnboardingPage() {
                       className="w-full h-[38px] bg-surface-container hover:bg-surface-container-high border border-outline-variant text-primary text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1"
                     >
                       <span className="material-symbols-outlined text-[16px]">add</span>
-                      <span>Manage Doctors</span>
+                      <span>Manage Team</span>
                     </button>
                   </div>
                 </div>
@@ -916,7 +914,7 @@ export default function ClinicOnboardingPage() {
                     </div>
                     <h4 className="text-sm font-bold text-on-surface">Prescription Presets</h4>
                     <p className="text-xs text-on-surface-variant leading-relaxed">
-                      {clinicPresets.length} seeded templates (Viral Fever, Cold, Acidity, UTI, etc.).
+                      {clinicPresets.length} reusable templates. Create your own shortcut with clinic medicines.
                     </p>
                   </div>
                   <div className="pt-md">
@@ -926,7 +924,7 @@ export default function ClinicOnboardingPage() {
                       className="w-full h-[38px] bg-surface-container hover:bg-surface-container-high border border-outline-variant text-tertiary text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1"
                     >
                       <span className="material-symbols-outlined text-[16px]">tune</span>
-                      <span>View Presets ({clinicPresets.length})</span>
+                      <span>Manage Presets ({clinicPresets.length})</span>
                     </button>
                   </div>
                 </div>
@@ -967,11 +965,11 @@ export default function ClinicOnboardingPage() {
       {/* ========================================================================= */}
       {showAddDoctorModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-md animate-[fadeIn_0.2s_ease-out]">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl max-w-md w-full p-lg shadow-xl space-y-md">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl max-w-[28rem] w-full p-lg shadow-xl space-y-md">
             <div className="flex items-center justify-between border-b border-outline-variant pb-sm">
               <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[20px]">person_add</span>
-                Add Doctor to Clinic
+                Manage Clinic Team
               </h3>
               <button
                 onClick={() => setShowAddDoctorModal(false)}
@@ -983,22 +981,24 @@ export default function ClinicOnboardingPage() {
 
             {/* List of currently registered doctors */}
             <div className="space-y-xs max-h-36 overflow-y-auto pr-1">
-              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Current Clinic Doctors</p>
+              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Current team</p>
               {clinicDoctors.map((doc) => (
                 <div key={doc.id} className="p-sm bg-surface-container-low rounded-lg border border-outline-variant flex items-center justify-between text-xs">
                   <div>
                     <p className="font-bold text-on-surface">{doc.name}</p>
                     <p className="text-[11px] text-on-surface-variant">{doc.qualification} • {doc.specialty}</p>
                   </div>
-                  <span className="text-[10px] bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded font-bold">Active</span>
+                  <div className="flex gap-1"><button type="button" aria-label={`Edit ${doc.name}`} onClick={() => { setTeamRole('DOCTOR'); setEditingTeamId(doc.id); setNewDoctorName(doc.name); setNewDoctorQualification(doc.qualification); setNewDoctorRegNo(doc.registrationNumber); setNewDoctorSpecialty(doc.specialty); setStaffEmail(doc.email); setStaffPhone(doc.phone); }} className="p-1 text-primary"><span className="material-symbols-outlined text-[16px]">edit</span></button><button type="button" aria-label={`Delete ${doc.name}`} onClick={() => { deleteDoctorFromClinic(doc.id); if (createdClinic) setClinicDoctors(getClinicDoctors(createdClinic.id)); }} className="p-1 text-error"><span className="material-symbols-outlined text-[16px]">delete</span></button></div>
                 </div>
               ))}
+              {clinicReceptionists.map((person) => <div key={person.id} className="p-sm bg-surface-container-low rounded-lg border border-outline-variant flex items-center justify-between text-xs"><div><p className="font-bold">{person.name}</p><p className="text-[11px] text-on-surface-variant">Receptionist • {person.phone}</p></div><div className="flex gap-1"><button type="button" aria-label={`Edit ${person.name}`} onClick={() => { setTeamRole('RECEPTIONIST'); setEditingTeamId(person.id); setNewDoctorName(person.name); setStaffEmail(person.email); setStaffPhone(person.phone); }} className="p-1 text-primary"><span className="material-symbols-outlined text-[16px]">edit</span></button><button type="button" aria-label={`Delete ${person.name}`} onClick={() => { deleteReceptionistFromClinic(person.id); if (createdClinic) setClinicReceptionists(getClinicReceptionists(createdClinic.id)); }} className="p-1 text-error"><span className="material-symbols-outlined text-[16px]">delete</span></button></div></div>)}
             </div>
 
             {/* Form to add new doctor */}
             <form onSubmit={handleAddDoctorSubmit} className="space-y-sm pt-sm border-t border-outline-variant">
+              <div className="grid grid-cols-2 gap-xs bg-surface-container-low p-1 rounded-lg"><button type="button" onClick={() => { setTeamRole('DOCTOR'); setEditingTeamId(null); setNewDoctorName(''); }} className={`h-8 text-xs font-bold rounded-md ${teamRole === 'DOCTOR' ? 'bg-surface shadow-sm text-primary' : 'text-on-surface-variant'}`}>Doctor</button><button type="button" onClick={() => { setTeamRole('RECEPTIONIST'); setEditingTeamId(null); setNewDoctorName(''); }} className={`h-8 text-xs font-bold rounded-md ${teamRole === 'RECEPTIONIST' ? 'bg-surface shadow-sm text-primary' : 'text-on-surface-variant'}`}>Receptionist</button></div>
               <div>
-                <label className="text-xs font-bold text-on-surface block mb-1">Doctor Full Name *</label>
+                <label className="text-xs font-bold text-on-surface block mb-1">Full Name *</label>
                 <input
                   type="text"
                   placeholder="e.g. Dr. Sneha Kulkarni"
@@ -1009,7 +1009,7 @@ export default function ClinicOnboardingPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-sm">
+              {teamRole === 'DOCTOR' && <div className="grid grid-cols-2 gap-sm">
                 <div>
                   <label className="text-xs font-bold text-on-surface block mb-1">Qualification</label>
                   <input
@@ -1030,9 +1030,9 @@ export default function ClinicOnboardingPage() {
                     className="w-full h-[40px] px-sm text-xs bg-transparent border border-outline-variant rounded-lg focus:border-primary focus:outline-none"
                   />
                 </div>
-              </div>
+              </div>}
 
-              <div>
+              {teamRole === 'DOCTOR' && <div>
                 <label className="text-xs font-bold text-on-surface block mb-1">Specialty</label>
                 <select
                   value={newDoctorSpecialty}
@@ -1043,7 +1043,8 @@ export default function ClinicOnboardingPage() {
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
-              </div>
+              </div>}
+              <div className="grid grid-cols-2 gap-sm"><div><label className="text-xs font-bold block mb-1">Email</label><input type="email" value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)} className="w-full h-[40px] px-sm text-xs bg-transparent border border-outline-variant rounded-lg" placeholder="name@clinic.in" /></div><div><label className="text-xs font-bold block mb-1">Mobile</label><input value={staffPhone} onChange={(e) => setStaffPhone(e.target.value)} className="w-full h-[40px] px-sm text-xs bg-transparent border border-outline-variant rounded-lg" placeholder="9876543210" /></div></div>
 
               <div className="flex justify-end gap-sm pt-sm">
                 <button
@@ -1057,7 +1058,7 @@ export default function ClinicOnboardingPage() {
                   type="submit"
                   className="px-lg h-[38px] bg-primary text-white text-xs font-bold rounded-lg hover:opacity-90 shadow-sm"
                 >
-                  Save Doctor
+                  {editingTeamId ? 'Update' : `Add ${teamRole === 'DOCTOR' ? 'Doctor' : 'Receptionist'}`}
                 </button>
               </div>
             </form>
@@ -1070,11 +1071,11 @@ export default function ClinicOnboardingPage() {
       {/* ========================================================================= */}
       {showPresetsModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-md animate-[fadeIn_0.2s_ease-out]">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl max-w-lg w-full p-lg shadow-xl space-y-md">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl max-w-[44rem] max-h-[90vh] overflow-y-auto w-full p-lg shadow-xl space-y-md">
             <div className="flex items-center justify-between border-b border-outline-variant pb-sm">
               <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-tertiary text-[20px]">bolt</span>
-                Seeded Prescription Templates
+                Prescription Presets
               </h3>
               <button
                 onClick={() => setShowPresetsModal(false)}
@@ -1085,10 +1086,10 @@ export default function ClinicOnboardingPage() {
             </div>
 
             <p className="text-xs text-on-surface-variant">
-              These pre-packaged templates are automatically active on the <strong className="text-on-surface">Consultation Entry Screen</strong> for rapid 1-click prescribing.
+              Create reusable shortcuts for the consultation screen. All medicines shown here are fictional demonstration data.
             </p>
 
-            <div className="space-y-sm max-h-72 overflow-y-auto pr-1">
+            <div className="space-y-sm max-h-48 overflow-y-auto pr-1">
               {clinicPresets.map((preset) => (
                 <div key={preset.id} className="p-sm bg-surface-container-low rounded-xl border border-outline-variant space-y-1">
                   <div className="flex items-center justify-between">
@@ -1098,9 +1099,7 @@ export default function ClinicOnboardingPage() {
                       </div>
                       <h4 className="text-xs font-bold text-on-surface">{preset.label}</h4>
                     </div>
-                    <span className="text-[10px] bg-primary-fixed text-on-primary-fixed-variant px-2 py-0.5 rounded-full font-bold">
-                      {preset.medicines.length} drugs
-                    </span>
+                    <div className="flex items-center gap-1"><span className="text-[10px] bg-primary-fixed text-on-primary-fixed-variant px-2 py-0.5 rounded-full font-bold">{preset.medicines.length} medicine{preset.medicines.length !== 1 ? 's' : ''}</span><button type="button" aria-label={`Edit ${preset.label}`} onClick={() => { setEditingPresetId(preset.id); setPresetName(preset.label); setPresetDiagnosis(preset.diagnosis); setPresetSymptoms(preset.symptoms.join(', ')); setPresetMedicines(preset.medicines); setPresetMedicine(''); setShowMedicineSuggestions(false); }} className="p-1 text-primary"><span className="material-symbols-outlined text-[16px]">edit</span></button><button type="button" aria-label={`Delete ${preset.label}`} onClick={() => { deletePresetFromClinic(preset.id); if (createdClinic) setClinicPresets(getClinicPresets(createdClinic.id)); }} className="p-1 text-error"><span className="material-symbols-outlined text-[16px]">delete</span></button></div>
                   </div>
                   <p className="text-[11px] text-on-surface-variant"><strong>Diagnosis:</strong> {preset.diagnosis}</p>
                   <p className="text-[11px] text-on-surface-variant">
@@ -1109,6 +1108,20 @@ export default function ClinicOnboardingPage() {
                 </div>
               ))}
             </div>
+
+            <form onSubmit={handlePresetSubmit} className="space-y-sm border-t border-outline-variant pt-sm">
+              <h4 className="text-xs font-bold">{editingPresetId ? 'Edit preset' : 'Create custom preset'}</h4>
+              <div className="grid grid-cols-2 gap-sm"><div><label className="text-[11px] font-bold block mb-1">Preset name *</label><input value={presetName} onChange={(e) => setPresetName(e.target.value)} required placeholder="e.g. Viral Fever" className="w-full h-9 px-sm text-xs bg-transparent border border-outline-variant rounded-lg" /></div><div><label className="text-[11px] font-bold block mb-1">Diagnosis</label><input value={presetDiagnosis} onChange={(e) => setPresetDiagnosis(e.target.value)} placeholder="Default diagnosis" className="w-full h-9 px-sm text-xs bg-transparent border border-outline-variant rounded-lg" /></div></div>
+              <div><label className="text-[11px] font-bold block mb-1">Symptoms</label><input value={presetSymptoms} onChange={(e) => setPresetSymptoms(e.target.value)} placeholder="Fever, body pain, headache" className="w-full h-9 px-sm text-xs bg-transparent border border-outline-variant rounded-lg" /><p className="text-[10px] text-on-surface-variant mt-1">Separate multiple symptoms with commas.</p></div>
+              <p className="text-[11px] font-bold pt-xs">Add medicines</p>
+              <div className="relative"><input value={presetMedicine} onFocus={() => setShowMedicineSuggestions(true)} onBlur={() => window.setTimeout(() => setShowMedicineSuggestions(false), 120)} onChange={(e) => { setPresetMedicine(e.target.value); setShowMedicineSuggestions(true); }} placeholder="Type ‘para’ to search medicines" autoComplete="off" className="w-full h-9 px-sm text-xs bg-transparent border border-outline-variant rounded-lg" />{medicineSuggestions.length > 0 && <div className="absolute z-10 top-10 inset-x-0 bg-surface border border-outline-variant rounded-lg shadow-lg overflow-hidden">{medicineSuggestions.map((medicine) => <button key={medicine.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setPresetMedicine(medicine.name); setPresetMedicineType(medicine.type); setShowMedicineSuggestions(false); }} className="w-full px-sm py-2 text-left text-xs hover:bg-primary-container flex justify-between"><span>{medicine.name}</span><span className="text-on-surface-variant">{medicine.type}</span></button>)}</div>}</div>
+              <div className="grid grid-cols-4 gap-xs"><select aria-label="Medicine form" value={presetMedicineType} onChange={(e) => setPresetMedicineType(e.target.value)} className="h-9 px-2 text-xs bg-transparent border border-outline-variant rounded-lg"><option>Tablet</option><option>Capsule</option><option>Syrup</option><option>Drops</option><option>Injection</option><option>Ointment</option></select><select aria-label="Frequency" value={presetDose} onChange={(e) => setPresetDose(e.target.value)} className="h-9 px-2 text-xs bg-transparent border border-outline-variant rounded-lg"><option>1-0-1</option><option>1-0-0</option><option>0-0-1</option><option>1-1-1</option><option>SOS</option></select><select aria-label="Timing" value={presetTiming} onChange={(e) => setPresetTiming(e.target.value)} className="h-9 px-2 text-xs bg-transparent border border-outline-variant rounded-lg"><option>After Food</option><option>Before Food</option><option>With Food</option><option>Any Time</option><option>SOS</option></select><div className="flex"><input aria-label="Duration in days" type="number" min={1} max={90} value={presetDuration} onChange={(e) => setPresetDuration(Number(e.target.value))} className="w-full min-w-0 h-9 px-2 text-xs bg-transparent border border-outline-variant rounded-l-lg" /><span className="h-9 px-2 flex items-center text-[10px] bg-surface-container border border-l-0 border-outline-variant rounded-r-lg">days</span></div></div>
+              <button type="button" onClick={addMedicineToPreset} disabled={!presetMedicine.trim()} className="w-full h-9 border border-primary text-primary text-xs font-bold rounded-lg disabled:opacity-40"><span className="material-symbols-outlined text-[15px] align-middle mr-1">add</span>Add medicine to preset</button>
+              {presetMedicines.length > 0 && <div className="space-y-xs bg-surface-container-low rounded-lg p-xs">{presetMedicines.map((medicine, index) => <div key={`${medicine.name}-${index}`} className="bg-surface px-sm py-2 rounded-md flex items-center justify-between gap-sm text-xs"><div className="min-w-0"><p className="font-bold truncate">{medicine.name} <span className="font-normal text-on-surface-variant">• {medicine.type}</span></p><p className="text-[10px] text-on-surface-variant">{medicine.dose} • {medicine.timing} • {medicine.duration} days</p></div><button type="button" aria-label={`Remove ${medicine.name}`} onClick={() => setPresetMedicines((items) => items.filter((_, itemIndex) => itemIndex !== index))} className="text-error p-1"><span className="material-symbols-outlined text-[17px]">delete</span></button></div>)}</div>}
+              {presetMedicines.length === 0 && <p className="text-[11px] text-error">Add at least one medicine before saving the preset.</p>}
+              {presetSaveMessage && <p role="status" className="text-[11px] font-semibold text-tertiary bg-tertiary-container/30 rounded-lg px-sm py-2">{presetSaveMessage}</p>}
+              <div className="flex justify-end"><button type="submit" disabled={presetMedicines.length === 0} className="px-lg h-9 bg-primary text-white text-xs font-bold rounded-lg disabled:opacity-40">{editingPresetId ? 'Update Preset' : 'Save Preset'}</button></div>
+            </form>
 
             <div className="flex justify-end pt-sm border-t border-outline-variant">
               <button
@@ -1128,7 +1141,7 @@ export default function ClinicOnboardingPage() {
       {/* ========================================================================= */}
       {showMedicinesModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-md animate-[fadeIn_0.2s_ease-out]">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl max-w-md w-full p-lg shadow-xl space-y-md">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl max-w-[28rem] w-full p-lg shadow-xl space-y-md">
             <div className="flex items-center justify-between border-b border-outline-variant pb-sm">
               <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[20px]">medication</span>
@@ -1147,9 +1160,9 @@ export default function ClinicOnboardingPage() {
               <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Catalog ({clinicMedicines.length} items)</p>
               <div className="grid grid-cols-2 gap-xs">
                 {clinicMedicines.map((med) => (
-                  <div key={med.id} className="p-2 bg-surface-container-low rounded-lg border border-outline-variant flex items-center justify-between text-xs">
-                    <span className="font-semibold text-on-surface truncate">{med.name}</span>
-                    <span className="text-[10px] text-on-surface-variant bg-surface px-1 py-0.5 rounded">{med.type}</span>
+                  <div key={med.id} className="p-2 bg-surface-container-low rounded-lg border border-outline-variant flex items-center justify-between gap-1 text-xs">
+                    <span className="font-semibold text-on-surface truncate flex-1">{med.name}</span>
+                    <span className="text-[10px] text-on-surface-variant bg-surface px-1 py-0.5 rounded">{med.type}</span><button type="button" aria-label={`Edit ${med.name}`} onClick={() => { setEditingMedicineId(med.id); setNewMedName(med.name); setNewMedType(med.type); }} className="text-primary"><span className="material-symbols-outlined text-[15px]">edit</span></button><button type="button" aria-label={`Delete ${med.name}`} onClick={() => { deleteMedicineFromClinic(med.id); if (createdClinic) setClinicMedicines(getClinicMedicines(createdClinic.id)); }} className="text-error"><span className="material-symbols-outlined text-[15px]">delete</span></button>
                   </div>
                 ))}
               </div>
@@ -1157,7 +1170,7 @@ export default function ClinicOnboardingPage() {
 
             {/* Quick Add Medicine Form */}
             <form onSubmit={handleAddMedicineSubmit} className="space-y-sm pt-sm border-t border-outline-variant">
-              <h4 className="text-xs font-bold text-on-surface">Add New Medicine to Catalog</h4>
+              <h4 className="text-xs font-bold text-on-surface">{editingMedicineId ? 'Edit Medicine' : 'Add New Medicine to Catalog'}</h4>
               <div className="flex gap-sm">
                 <input
                   type="text"
@@ -1193,7 +1206,7 @@ export default function ClinicOnboardingPage() {
                   type="submit"
                   className="px-lg h-[36px] bg-primary text-white text-xs font-bold rounded-lg hover:opacity-90 shadow-sm"
                 >
-                  Add Medicine
+                  {editingMedicineId ? 'Update Medicine' : 'Add Medicine'}
                 </button>
               </div>
             </form>

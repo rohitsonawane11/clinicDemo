@@ -7,6 +7,7 @@ import {
   Doctor,
   PrescriptionPreset,
   ClinicMedicine,
+  Receptionist,
 } from '../types/clinic';
 
 // ============================================================================
@@ -172,6 +173,7 @@ const STORAGE_KEYS = {
   DOCTORS: "bharat_clinic_doctors",
   PRESETS: "bharat_clinic_presets",
   MEDICINES: "bharat_clinic_medicines",
+  RECEPTIONISTS: "bharat_clinic_receptionists",
 };
 
 function safeGetJSON<T>(key: string, fallback: T): T {
@@ -188,6 +190,7 @@ function safeSetJSON<T>(key: string, value: T): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    window.dispatchEvent(new CustomEvent("clinic-store-change", { detail: { key } }));
   } catch (err) {
     console.error(`Failed to save to localStorage for key: ${key}`, err);
   }
@@ -241,6 +244,22 @@ export function setActiveClinic(clinicId: string): Clinic | null {
     return target;
   }
   return null;
+}
+
+export function updateActiveClinic(updated: Partial<Clinic>): Clinic {
+  const active = getActiveClinic();
+  const clinics = getAllClinics();
+  const next: Clinic = {
+    ...active,
+    ...updated,
+    id: active.id,
+    ownerId: active.ownerId,
+    address: updated.address ? { ...active.address, ...updated.address } : active.address,
+    settings: updated.settings ? { ...active.settings, ...updated.settings } : active.settings,
+    updatedAt: new Date().toISOString(),
+  };
+  safeSetJSON(STORAGE_KEYS.CLINICS, clinics.map((clinic) => clinic.id === active.id ? next : clinic));
+  return next;
 }
 
 export function createClinicTenant(payload: CreateClinicPayload): {
@@ -369,38 +388,112 @@ export function addDoctorToClinic(
   return newDoctor;
 }
 
+export function updateDoctorInClinic(id: string, updated: Partial<Doctor>): Doctor | null {
+  const doctors = safeGetJSON<Doctor[]>(STORAGE_KEYS.DOCTORS, []);
+  const index = doctors.findIndex((doctor) => doctor.id === id);
+  if (index < 0) return null;
+  doctors[index] = { ...doctors[index], ...updated, id: doctors[index].id, clinicId: doctors[index].clinicId };
+  safeSetJSON(STORAGE_KEYS.DOCTORS, doctors);
+  return doctors[index];
+}
+
+export function deleteDoctorFromClinic(id: string): void {
+  safeSetJSON(STORAGE_KEYS.DOCTORS, safeGetJSON<Doctor[]>(STORAGE_KEYS.DOCTORS, []).filter((doctor) => doctor.id !== id));
+}
+
+export function getClinicReceptionists(clinicId: string): Receptionist[] {
+  return safeGetJSON<Receptionist[]>(STORAGE_KEYS.RECEPTIONISTS, []).filter((item) => item.clinicId === clinicId);
+}
+
+export function addReceptionistToClinic(clinicId: string, data: Pick<Receptionist, 'name' | 'email' | 'phone'>): Receptionist {
+  const item: Receptionist = { ...data, id: `rec_${Date.now()}`, clinicId, isActive: true, createdAt: new Date().toISOString() };
+  safeSetJSON(STORAGE_KEYS.RECEPTIONISTS, [item, ...safeGetJSON<Receptionist[]>(STORAGE_KEYS.RECEPTIONISTS, [])]);
+  return item;
+}
+
+export function updateReceptionistInClinic(id: string, updated: Partial<Receptionist>): Receptionist | null {
+  const items = safeGetJSON<Receptionist[]>(STORAGE_KEYS.RECEPTIONISTS, []);
+  const index = items.findIndex((item) => item.id === id);
+  if (index < 0) return null;
+  items[index] = { ...items[index], ...updated, id: items[index].id, clinicId: items[index].clinicId };
+  safeSetJSON(STORAGE_KEYS.RECEPTIONISTS, items);
+  return items[index];
+}
+
+export function deleteReceptionistFromClinic(id: string): void {
+  safeSetJSON(STORAGE_KEYS.RECEPTIONISTS, safeGetJSON<Receptionist[]>(STORAGE_KEYS.RECEPTIONISTS, []).filter((item) => item.id !== id));
+}
+
 export function getClinicPresets(clinicId: string): PrescriptionPreset[] {
   const presets = safeGetJSON<PrescriptionPreset[]>(STORAGE_KEYS.PRESETS, []);
   const scoped = presets.filter((p) => p.clinicId === clinicId);
   if (scoped.length > 0) return scoped;
 
   // Fallback to default presets mapped to clinicId
-  return DEFAULT_PRESET_TEMPLATES.map((tmpl, idx) => ({
+  const defaults = DEFAULT_PRESET_TEMPLATES.map((tmpl, idx) => ({
     id: `pst_${clinicId}_${idx + 1}`,
     clinicId,
     ...tmpl,
   }));
+  safeSetJSON(STORAGE_KEYS.PRESETS, [...defaults, ...presets]);
+  return defaults;
+}
+
+export function addPresetToClinic(clinicId: string, data: Omit<PrescriptionPreset, 'id' | 'clinicId' | 'isDefault'>): PrescriptionPreset {
+  const preset: PrescriptionPreset = { ...data, id: `pst_${clinicId}_${Date.now()}`, clinicId, isDefault: false };
+  safeSetJSON(STORAGE_KEYS.PRESETS, [preset, ...safeGetJSON<PrescriptionPreset[]>(STORAGE_KEYS.PRESETS, [])]);
+  return preset;
+}
+
+export function updatePresetInClinic(id: string, updated: Partial<PrescriptionPreset>): PrescriptionPreset | null {
+  const items = safeGetJSON<PrescriptionPreset[]>(STORAGE_KEYS.PRESETS, []);
+  const index = items.findIndex((item) => item.id === id);
+  if (index < 0) return null;
+  items[index] = { ...items[index], ...updated, id: items[index].id, clinicId: items[index].clinicId };
+  safeSetJSON(STORAGE_KEYS.PRESETS, items);
+  return items[index];
+}
+
+export function deletePresetFromClinic(id: string): void {
+  safeSetJSON(STORAGE_KEYS.PRESETS, safeGetJSON<PrescriptionPreset[]>(STORAGE_KEYS.PRESETS, []).filter((item) => item.id !== id));
 }
 
 export function getClinicMedicines(clinicId: string): ClinicMedicine[] {
   const meds = safeGetJSON<ClinicMedicine[]>(STORAGE_KEYS.MEDICINES, []);
   const scoped = meds.filter((m) => m.clinicId === clinicId);
-  return scoped.length > 0 ? scoped : DEFAULT_FORMULARY_MEDICINES.map((m, i) => ({
+  if (scoped.length > 0) return scoped;
+  const defaults = DEFAULT_FORMULARY_MEDICINES.map((m, i) => ({
     id: `med_${clinicId}_${i + 1}`,
     clinicId,
     ...m,
   }));
+  safeSetJSON(STORAGE_KEYS.MEDICINES, [...defaults, ...meds]);
+  return defaults;
 }
 
-export function addMedicineToClinic(clinicId: string, name: string, type: string, category?: string): ClinicMedicine {
+export function addMedicineToClinic(clinicId: string, name: string, type: string, category?: string, details?: Pick<ClinicMedicine, 'genericName' | 'brandName' | 'strength'>): ClinicMedicine {
   const newMed: ClinicMedicine = {
     id: `med_${clinicId}_${Date.now()}`,
     clinicId,
     name: name.trim(),
     type,
     category: category || "General",
+    ...details,
   };
   const existing = safeGetJSON<ClinicMedicine[]>(STORAGE_KEYS.MEDICINES, []);
   safeSetJSON(STORAGE_KEYS.MEDICINES, [newMed, ...existing]);
   return newMed;
+}
+
+export function updateMedicineInClinic(id: string, updated: Partial<ClinicMedicine>): ClinicMedicine | null {
+  const items = safeGetJSON<ClinicMedicine[]>(STORAGE_KEYS.MEDICINES, []);
+  const index = items.findIndex((item) => item.id === id);
+  if (index < 0) return null;
+  items[index] = { ...items[index], ...updated, id: items[index].id, clinicId: items[index].clinicId };
+  safeSetJSON(STORAGE_KEYS.MEDICINES, items);
+  return items[index];
+}
+
+export function deleteMedicineFromClinic(id: string): void {
+  safeSetJSON(STORAGE_KEYS.MEDICINES, safeGetJSON<ClinicMedicine[]>(STORAGE_KEYS.MEDICINES, []).filter((item) => item.id !== id));
 }

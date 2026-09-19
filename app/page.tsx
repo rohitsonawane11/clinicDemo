@@ -225,7 +225,7 @@ export default function Home() {
                         <div className="text-slate-800 font-semibold mt-0.5">Viral Fever + Body Ache</div>
                       </div>
                       <div className="bg-white p-2.5 rounded border border-slate-200">
-                        <div className="text-slate-400 font-medium uppercase text-[10px]">Prescribed Dosage</div>
+                        <div className="text-slate-400 font-medium uppercase text-[10px]">Prescribed Frequency</div>
                         <div className="text-slate-800 font-semibold mt-0.5">Paracetamol 500mg, Azithromycin 500mg</div>
                       </div>
                     </div>
@@ -272,7 +272,7 @@ export default function Home() {
                   <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm font-bold flex-shrink-0">✓</span>
                   <div>
                     <h3 className="text-base font-bold text-slate-900">Legible e-prescriptions with 1-click presets</h3>
-                    <p className="text-sm text-slate-600 mt-1">Generate clear digital prescriptions with structured dosages (1-0-1), food instructions, and clinic branding. Print immediately or send via SMS/WhatsApp.</p>
+                    <p className="text-sm text-slate-600 mt-1">Generate clear digital prescriptions with structured frequencies (1-0-1), food instructions, and clinic branding. Print immediately or send via SMS/WhatsApp.</p>
                   </div>
                 </div>
               </div>
@@ -349,7 +349,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 mb-2">Smart E-Prescription</h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Clear dosages, Indian standard timings (1-0-1, Morning-Night), duration, and post/pre-meal instructions in regional clarity.
+                  Clear frequencies, Indian standard timings (1-0-1, Morning-Night), duration, and post/pre-meal instructions in regional clarity.
                 </p>
               </div>
               {/* Cap 3 */}
@@ -459,7 +459,7 @@ export default function Home() {
                       <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
                         <tr>
                           <th className="p-3">Medicine</th>
-                          <th className="p-3">Dosage &amp; Frequency</th>
+                          <th className="p-3">Frequency</th>
                           <th className="p-3">Duration</th>
                           <th className="p-3">Instructions</th>
                         </tr>
@@ -702,7 +702,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-base font-bold text-slate-900 mb-2">Configure Presets &amp; Staff</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Enable seeded prescription templates or tailor custom medicine dosages. Add receptionists and consulting associates with 1 click.
+                  Enable seeded prescription templates or tailor custom medicine frequencies. Add receptionists and consulting associates with 1 click.
                 </p>
               </div>
               {/* Step 3 */}
@@ -729,7 +729,7 @@ export default function Home() {
                 <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2.5 py-1 rounded uppercase">Built Around The Doctor</span>
                 <h3 className="text-2xl font-bold text-slate-900 mt-4 mb-3">Minimal typing, maximum patient attention</h3>
                 <p className="text-sm text-slate-600 leading-relaxed mb-6">
-                  Bharat Clinic doesn&apos;t turn doctors into data entry operators. With our rapid chip selectors, past diagnosis recall, and dosage templates, you finish complete electronic consultations in less time than handwriting a paper pad.
+                  Bharat Clinic doesn&apos;t turn doctors into data entry operators. With our rapid chip selectors, past diagnosis recall, and frequency templates, you finish complete electronic consultations in less time than handwriting a paper pad.
                 </p>
                 <div className="space-y-3 text-xs font-semibold text-slate-700">
                   <div className="flex items-center gap-2">✓ Less than 30 seconds per average routine prescription</div>
@@ -788,7 +788,7 @@ export default function Home() {
                 <span className="text-base font-bold text-slate-900">Bharat Clinic</span>
                 <span className="badge-saas px-1.5 py-0.5 rounded text-[10px]">SAAS</span>
               </div>
-              <p className="text-slate-600 text-xs leading-relaxed max-w-sm mb-3">
+              <p className="text-slate-600 text-xs leading-relaxed max-w-[24rem] mb-3">
                 Lightweight, high-speed clinical management system built specifically for Indian outpatient clinics, family doctors, and multispeciality centers.
               </p>
               <div className="text-[11px] text-slate-400">
